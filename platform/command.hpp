@@ -804,7 +804,22 @@ class NDRangeKernelCommand : public Command {
                        uint64_t prevGridSum = 0, uint64_t allGridSum = 0,
                        uint32_t firstDevice = 0, bool forceProfiling = false);
 
-  virtual void submit(device::VirtualDevice& device) { device.submitKernel(*this); }
+  virtual void submit(device::VirtualDevice& device) { 
+    
+    // FROCM
+    clock_t begin = clock();
+    
+    device.submitKernel(*this);
+    
+    clock_t end = clock();
+    double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+
+    printf ( "\nEnd of ROCclr: 1 submit: %f\n", time_spent );
+
+    printf ( "ROCclr: 1 submit - clock begin = %ld\n", begin );
+    printf ( "ROCclr: 1 submit - clock end = %ld\n", end );
+    printf ( "ROCclr: 1 submit - clock per second = %ld\n", CLOCKS_PER_SEC );
+  }
 
   //! Release all resources associated with this command (
   void releaseResources();

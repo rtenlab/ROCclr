@@ -109,6 +109,10 @@ void HostQueue::finish() {
 }
 
 void HostQueue::loop(device::VirtualDevice* virtualDevice) {
+  
+  // FROCM
+  clock_t begin = clock();
+  
   // Notify the caller that the queue is ready to accept commands.
   {
     ScopedLock sl(queueLock_);
@@ -175,6 +179,15 @@ void HostQueue::loop(device::VirtualDevice* virtualDevice) {
       tail = head = NULL;
     }
   }  // while (true) {
+  
+  clock_t end = clock();
+  double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+
+  printf ( "\nEnd of ROCclr: HostQueue::loop: %f\n", time_spent );
+
+  printf ( "ROCclr: HostQueue::loop - clock begin = %ld\n", begin );
+  printf ( "ROCclr: HostQueue::loop - clock end = %ld\n", end );
+  printf ( "ROCclr: HostQueue::loop - clock per second = %ld\n", CLOCKS_PER_SEC );
 }
 
 void HostQueue::append(Command& command) {

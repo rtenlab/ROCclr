@@ -2124,6 +2124,10 @@ bool VirtualGPU::createVirtualQueue(uint deviceQueueSize)
 
 bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes, const amd::Kernel& kernel,
   const_address parameters, void* eventHandle, uint32_t sharedMemBytes, amd::NDRangeKernelCommand* vcmd) {
+  
+  // FROCM
+  clock_t begin = clock();
+  
   device::Kernel* devKernel = const_cast<device::Kernel*>(kernel.getDeviceKernel(dev()));
   Kernel& gpuKernel = static_cast<Kernel&>(*devKernel);
   size_t ldsUsage = gpuKernel.WorkgroupGroupSegmentByteSize();
@@ -2394,6 +2398,16 @@ bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes, const 
     }
     wrtBackImageBuffer_.clear();
   }
+  
+  clock_t end = clock();
+  double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+
+  printf ( "\nEnd of ROCclr: 3 submitKernelInternal: %f\n", time_spent );
+
+  printf ( "ROCclr: 3 submitKernelInternal - clock begin = %ld\n", begin );
+  printf ( "ROCclr: 3 submitKernelInternal - clock end = %ld\n", end );
+  printf ( "ROCclr: 3 submitKernelInternal - clock per second = %ld\n", CLOCKS_PER_SEC );
+  
   return true;
 }
 /**
@@ -2406,6 +2420,10 @@ bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes, const 
  * the list of kernel parameters.
  */
 void VirtualGPU::submitKernel(amd::NDRangeKernelCommand& vcmd) {
+  
+  // FROCM
+  clock_t begin = clock();
+  
   if (vcmd.cooperativeGroups() || vcmd.cooperativeMultiDeviceGroups()) {
     // Wait for the execution on the current queue, since the coop groups will use the device queue
     releaseGpuMemoryFence();
@@ -2458,6 +2476,15 @@ void VirtualGPU::submitKernel(amd::NDRangeKernelCommand& vcmd) {
 
     profilingEnd(vcmd);
   }
+  
+  clock_t end = clock();
+  double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+
+  printf ( "\nEnd of ROCclr: 2 submitKernel: %f\n", time_spent );
+
+  printf ( "ROCclr: 2 submitKernel - clock begin = %ld\n", begin );
+  printf ( "ROCclr: 2 submitKernel - clock end = %ld\n", end );
+  printf ( "ROCclr: 2 submitKernel - clock per second = %ld\n", CLOCKS_PER_SEC );
 }
 
 void VirtualGPU::submitNativeFn(amd::NativeFnCommand& cmd) {

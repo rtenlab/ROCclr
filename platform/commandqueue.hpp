@@ -163,6 +163,10 @@ class HostQueue : public CommandQueue {
 
     //! The command queue thread entry point.
     void run(void* data) {
+      
+      // FROCM
+      clock_t begin = clock();
+      
       HostQueue* queue = static_cast<HostQueue*>(data);
       virtualDevice_ = queue->device().createVirtualDevice(queue);
       if (virtualDevice_ != NULL) {
@@ -174,6 +178,16 @@ class HostQueue : public CommandQueue {
         acceptingCommands_ = false;
         queue->flush();
       }
+      
+      clock_t end = clock();
+      double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+
+      printf ( "\nEnd of Thread run: %f\n", time_spent );
+
+      printf ( "Thread run - clock begin = %ld\n", begin );
+      printf ( "Thread run - clock end = %ld\n", end );
+      printf ( "Thread run - clock per second = %ld\n", CLOCKS_PER_SEC );
+      
     }
 
     //! Get virtual device for the current thread
