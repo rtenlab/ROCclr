@@ -31,6 +31,7 @@
 #include "hsa_ven_amd_aqlprofile.h"
 #include "rocsched.hpp"
 
+#include <queue>
 namespace roc {
 class Device;
 class Memory;
@@ -166,6 +167,8 @@ class Timestamp : public amd::ReferenceCountedObject {
   //! Returns the callback signal
   hsa_signal_t GetCallbackSignal() const { return callback_signal_; }
 };
+
+bool cuMaskCallback(hsa_signal_value_t value, void* arg);
 
 class VirtualGPU : public device::VirtualDevice {
  public:
@@ -381,12 +384,17 @@ class VirtualGPU : public device::VirtualDevice {
   void SetCopyCommandType(cl_command_type type) { copy_command_type_ = type; }
 
   HwQueueTracker& Barriers() { return barriers_; }
-
+  HwQueueTracker& CUBarriers() { return cu_barriers_; }
   Timestamp* timestamp() const { return timestamp_; }
 
   void profilerAttach(bool enable = false) { profilerAttached_ = enable; }
 
   bool isProfilerAttached() const { return profilerAttached_; }
+
+  hsa_barrier_and_packet_t cu_mask_barrier_packet_;
+  hsa_barrier_and_packet_t cu_mask_wait_barrier_packet_;
+  std::queue<hsa_signal_t> cu_mask_signals;
+
   // } roc OpenCL integration
  private:
   //! Dispatches a barrier with blocking HSA signals
@@ -492,6 +500,7 @@ class VirtualGPU : public device::VirtualDevice {
   hsa_signal_t schedulerSignal_;
 
   HwQueueTracker  barriers_;      //!< Tracks active barriers in ROCr
+  HwQueueTracker  cu_barriers_;      //!< Tracks active barriers used for cu masking
 
   //!< The number of chunks the kernel arg pool will be divided
   static constexpr uint32_t KernelArgPoolNumSignal = 8;

@@ -64,6 +64,8 @@
 */
 #define HSA_SAMPLER_OBJECT_ALIGNMENT 16
 
+extern bool cuMaskCallback(hsa_signal_value_t value, void* arg);
+
 namespace roc {
 // (HSA_FENCE_SCOPE_AGENT << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) invalidates I, K and L1
 // (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE) invalidates L1, L2 and flushes
@@ -1162,6 +1164,14 @@ bool VirtualGPU::create() {
   memset(&barrier_packet_, 0, sizeof(barrier_packet_));
   barrier_packet_.header = kInvalidAql;
 
+  // Initialize barrier packet.
+  memset(&cu_mask_barrier_packet_, 0, sizeof(cu_mask_barrier_packet_));
+  cu_mask_barrier_packet_.header = kInvalidAql;
+
+  memset(&cu_mask_wait_barrier_packet_, 0, sizeof(cu_mask_wait_barrier_packet_));
+  cu_mask_wait_barrier_packet_.header = kInvalidAql;
+
+
   // Create a object of PrintfDbg
   printfdbg_ = new PrintfDbg(roc_device_);
   if (nullptr == printfdbg_) {
@@ -1185,6 +1195,11 @@ bool VirtualGPU::create() {
   tracking_created_ = Barriers().Create();
   if (!tracking_created_) {
     LogError("Could not create signal for copy queue!");
+    return false;
+  }
+    // Allocate signal tracker for ROCr copy queue
+  if (!CUBarriers().Create(dev().getCpuAgent())) {
+    LogError("Could not create signal for CUBarriers!");
     return false;
   }
   return true;
@@ -2992,6 +3007,42 @@ bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes, const 
   return true;
 }
 
+bool cuMaskCallback(hsa_signal_value_t value, void *arg){
+
+  printf("CUMASKCALLBACK\n");
+  VirtualGPU* vGPU = reinterpret_cast<VirtualGPU*>(arg);
+
+  static bool first = true;
+  std::vector<uint32_t> cu_mask = {0,0};
+  uint32_t bitPosition;
+  if (first) {
+      bitPosition = 0;
+      first = false;
+  }
+  else { 
+     bitPosition = 1;
+     first = true;
+  }
+
+  if (bitPosition < 32) {
+      cu_mask[0] |= 1UL << bitPosition;
+  }
+  else {
+      cu_mask[1] |= 1UL << (bitPosition - 32);
+  }
+
+  hsa_status_t status = hsa_amd_queue_cu_set_mask(vGPU->gpu_queue(), cu_mask.size() * 32, cu_mask.data());
+
+   if (status != HSA_STATUS_SUCCESS) {
+    printf("hsa_amd_queue_cu_set_mask failed: 0x%lx\n",status);
+  }
+
+  hsa_signal_store_relaxed(vGPU->cu_mask_signals.front(),0);
+
+  vGPU->cu_mask_signals.pop();
+  return false;
+}
+
 /**
  * @brief Api to dispatch a kernel for execution. The implementation
  * parses the input object, an instance of virtual command to obtain
@@ -3003,6 +3054,18 @@ bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes, const 
  */
  // ================================================================================================
 void VirtualGPU::submitKernel(amd::NDRangeKernelCommand& vcmd) {
+  cu_mask_barrier_packet_.completion_signal  = CUBarriers().ActiveSignal();
+  cu_mask_wait_barrier_packet_.completion_signal  = CUBarriers().ActiveSignal();
+  cu_mask_signals.push(CUBarriers().ActiveSignal());
+  cu_mask_wait_barrier_packet_.dep_signal[0] = cu_mask_signals.back();
+  hsa_amd_signal_async_handler(cu_mask_barrier_packet_.completion_signal,
+                                   HSA_SIGNAL_CONDITION_EQ,
+                                   0,
+                                   cuMaskCallback,
+                                   reinterpret_cast<void*>(this));
+  dispatchBarrierPacket(&cu_mask_barrier_packet_);
+  dispatchBarrierPacket(&cu_mask_wait_barrier_packet_);
+
   if (vcmd.cooperativeGroups() || vcmd.cooperativeMultiDeviceGroups()) {
     // Wait for the execution on the current queue, since the coop groups will use the device queue
     releaseGpuMemoryFence(kSkipCpuWait);
