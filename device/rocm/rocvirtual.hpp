@@ -101,6 +101,16 @@ class Timestamp : public amd::ReferenceCountedObject {
   Timestamp& operator=(const Timestamp&) = delete;
 
  public:
+
+  //Kernel Profiling info
+  std::string name_;
+  uint32_t workgroup_size_x;
+  uint32_t workgroup_size_y;
+  uint32_t workgroup_size_z;
+  uint32_t grid_size_x;
+  uint32_t grid_size_y;
+  uint32_t grid_size_z;
+
   Timestamp(VirtualGPU* gpu, amd::Command& command)
     : start_(std::numeric_limits<uint64_t>::max())
     , end_(0)
@@ -169,6 +179,7 @@ class Timestamp : public amd::ReferenceCountedObject {
 };
 
 bool cuMaskCallback(hsa_signal_value_t value, void* arg);
+bool profilerCallback(hsa_signal_value_t value, void* arg);
 
 class VirtualGPU : public device::VirtualDevice {
  public:
@@ -401,7 +412,9 @@ class VirtualGPU : public device::VirtualDevice {
   void dispatchBlockingWait();
 
   bool dispatchAqlPacket(hsa_kernel_dispatch_packet_t* packet, uint16_t header,
-                         uint16_t rest, bool blocking = true);
+                         uint16_t rest, bool blocking = true,
+                         amd::NDRangeKernelCommand* vcmd = nullptr //!< Original launch command
+                         );
   bool dispatchAqlPacket(hsa_barrier_and_packet_t* packet, uint16_t header,
                         uint16_t rest, bool blocking = true);
   template <typename AqlPacket> bool dispatchGenericAqlPacket(AqlPacket* packet, uint16_t header,
