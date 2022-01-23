@@ -49,6 +49,7 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <stdlib.h>
 
 /*! \addtogroup HSA
  *  @{
@@ -569,11 +570,14 @@ class Device : public NullDevice {
   //! Returns True if memory pointer is known to ROCr (excludes HMM allocations)
   bool IsValidAllocation(const void* dev_ptr, size_t size) const;
 
+  uint32_t availableCUs[2]; 
+  uint32_t gpuIndex_; 
+
  private:
   bool create();
 
   //! Construct a new physical HSA device
-  Device(hsa_agent_t bkendDevice);
+  Device(hsa_agent_t bkendDevice,uint32_t index);
 
   bool SetSvmAttributesInt(const void* dev_ptr, size_t count, amd::MemoryAdvice advice,
                            bool first_alloc = false, bool use_cpu = false) const;

@@ -889,20 +889,42 @@ void VirtualGPU::dispatchBlockingWait() {
 }
 
 
+amd::Monitor log_lock_("Log File lock", false);
+
 bool profilerCallback(hsa_signal_value_t value, void* arg) {
 
   Timestamp* ts = reinterpret_cast<Timestamp*>(arg);
   ts->end();
+  VirtualGPU* vGPU = ts->gpu();
+  
+  //read average power for gpu
+  std::string power;
+  std::ifstream power_file;
+  std::string power_file_name = "/sys/class/hwmon/hwmon" +
+                                std::to_string(vGPU->dev().gpuIndex_) +
+                                "/power1_average";
+  power_file.open(power_file_name,std::ios::in);
+  power_file >> power;
 
-  std::cout << ts->name_ << ","
-            << ts->workgroup_size_x << ","
-            << ts->workgroup_size_y << ","
-            << ts->workgroup_size_z << ","
-            << ts->grid_size_x << ","
-            << ts->grid_size_y << ","
-            << ts->grid_size_z << ","
-            << ts->getStart() << ","
-            << ts->getEnd() << std::endl;
+
+  //write to log file
+  amd::ScopedLock lock(log_lock_);
+  std::ofstream log_file;
+  log_file.open("/home/mchow009/logs/test.csv", std::ios::out | std::ios::app);
+  log_file << ts->name_ << ","
+           << ts->workgroup_size_x << ","
+           << ts->workgroup_size_y << ","
+           << ts->workgroup_size_z << ","
+           << ts->grid_size_x << ","
+           << ts->grid_size_y << ","
+           << ts->grid_size_z << ","
+           << ts->getStart() << ","
+           << ts->getEnd() << ","
+           << vGPU->dev().gpuIndex_ << ","
+           << power << std::endl;
+
+  log_file.close();
+  power_file.close();
 
   delete ts;
   ts = nullptr;
@@ -913,9 +935,9 @@ bool profilerCallback(hsa_signal_value_t value, void* arg) {
 bool VirtualGPU::dispatchAqlPacket(
   hsa_kernel_dispatch_packet_t* packet, uint16_t header, uint16_t rest, bool blocking,
   amd::NDRangeKernelCommand* vcmd) {
-
   dispatchBlockingWait();
   //Dispatch CU Masking Packets
+ 
   Timestamp * ts =  new Timestamp(this, *vcmd);
   ts->workgroup_size_x = packet->workgroup_size_x;
   ts->workgroup_size_y = packet->workgroup_size_y;
@@ -923,7 +945,12 @@ bool VirtualGPU::dispatchAqlPacket(
   ts->grid_size_x = packet->grid_size_x;
   ts->grid_size_y = packet->grid_size_y;
   ts->grid_size_z = packet->grid_size_z;
-  ts->name_ = vcmd->kernel().name();
+  if (vcmd != nullptr) {
+    ts->name_ = vcmd->kernel().name();
+  }
+  else {
+      ts->name_ = "null";
+  }
 
   cu_mask_barrier_packet_.completion_signal  = CUBarriers().ActiveSignal();
   cu_mask_wait_barrier_packet_.completion_signal  = CUBarriers().ActiveSignal();
@@ -3096,28 +3123,15 @@ bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes, const 
 }
 
 bool cuMaskCallback(hsa_signal_value_t value, void *arg){
-
-  printf("CUMASKCALLBACK\n");
   Timestamp* ts = reinterpret_cast<Timestamp*>(arg);
   VirtualGPU* vGPU = ts->gpu();
 
   static bool first = true;
   std::vector<uint32_t> cu_mask = {0,0};
   uint32_t bitPosition;
-  if (first) {
-      bitPosition = 0;
-      first = false;
-  }
-  else { 
-     bitPosition = 1;
-     first = true;
-  }
-  if (bitPosition < 32) {
-      cu_mask[0] |= 1UL << bitPosition;
-  }
-  else {
-      cu_mask[1] |= 1UL << (bitPosition - 32);
-  }
+
+  cu_mask[0] = vGPU->dev().availableCUs[0];
+  cu_mask[1] = vGPU->dev().availableCUs[1];
 
   hsa_status_t status = hsa_amd_queue_cu_set_mask(vGPU->gpu_queue(), cu_mask.size() * 32, cu_mask.data());
 

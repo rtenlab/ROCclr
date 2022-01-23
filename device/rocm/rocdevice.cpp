@@ -154,7 +154,7 @@ bool NullDevice::create(const amd::Isa &isa) {
   return true;
 }
 
-Device::Device(hsa_agent_t bkendDevice)
+Device::Device(hsa_agent_t bkendDevice,uint32_t index)
     : mapCacheOps_(nullptr)
     , mapCache_(nullptr)
     , _bkendDevice(bkendDevice)
@@ -173,7 +173,8 @@ Device::Device(hsa_agent_t bkendDevice)
     , coopHostcallBuffer_(nullptr)
     , queueWithCUMaskPool_(QueuePriority::Total)
     , numOfVgpus_(0)
-    , preferred_numa_node_(0) {
+    , preferred_numa_node_(0)
+    , gpuIndex_(index) {
   group_segment_.handle = 0;
   system_segment_.handle = 0;
   system_coarse_segment_.handle = 0;
@@ -181,6 +182,29 @@ Device::Device(hsa_agent_t bkendDevice)
   gpuvm_segment_.handle = 0;
   gpu_fine_grained_segment_.handle = 0;
   prefetch_signal_.handle = 0;
+
+  char * numCUs_env = getenv("NUM_CUS");
+  uint32_t numCUs = 0;
+  if (numCUs_env != nullptr) {
+    numCUs = atoi(numCUs_env);
+  }
+  uint32_t bitPosition = 0;
+  availableCUs[0] = 0;
+  availableCUs[1] = 0;
+
+  for (int i = 0; i < numCUs; i++) {
+    if (bitPosition < 32) {
+      availableCUs[0] |= 1UL << bitPosition;
+    }
+    else {
+      availableCUs[1] |= 1UL << (bitPosition - 32);
+    }
+    bitPosition += 4;
+
+    if ((i+1) % 15 == 0) {
+        bitPosition -= 59;
+    }
+  }
 }
 
 void Device::setupCpuAgent() {
@@ -468,9 +492,9 @@ bool Device::init() {
     } while (pos < ordinals.size());
     gpu_agents_ = valid_agents;
   }
-
+  uint32_t index = 0;
   for (auto agent : gpu_agents_) {
-    std::unique_ptr<Device> roc_device(new Device(agent));
+    std::unique_ptr<Device> roc_device(new Device(agent,index));
     if (!roc_device) {
       LogError("Error creating new instance of Device on then heap.");
       continue;
@@ -498,6 +522,7 @@ bool Device::init() {
     }
 
     roc_device.release()->registerDevice();
+    index++;
   }
 
   if (0 != Device::numDevices(CL_DEVICE_TYPE_GPU, false)) {
