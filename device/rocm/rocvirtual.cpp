@@ -897,16 +897,6 @@ bool profilerCallback(hsa_signal_value_t value, void* arg) {
   ts->end();
   VirtualGPU* vGPU = ts->gpu();
   
-  //read average power for gpu
-  std::string power;
-  std::ifstream power_file;
-  std::string power_file_name = "/sys/class/hwmon/hwmon" +
-                                std::to_string(vGPU->dev().gpuIndex_) +
-                                "/power1_average";
-  power_file.open(power_file_name,std::ios::in);
-  power_file >> power;
-
-
   //write to log file
   amd::ScopedLock lock(log_lock_);
   std::ofstream log_file;
@@ -920,11 +910,9 @@ bool profilerCallback(hsa_signal_value_t value, void* arg) {
            << ts->grid_size_z << ","
            << ts->getStart() << ","
            << ts->getEnd() << ","
-           << vGPU->dev().gpuIndex_ << ","
-           << power << std::endl;
+           << vGPU->dev().gpuIndex_ << std::endl;
 
   log_file.close();
-  power_file.close();
 
   delete ts;
   ts = nullptr;
