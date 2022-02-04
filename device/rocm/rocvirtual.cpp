@@ -3115,13 +3115,14 @@ bool cuMaskCallback(hsa_signal_value_t value, void *arg){
   VirtualGPU* vGPU = ts->gpu();
 
   static bool first = true;
-  std::vector<uint32_t> cu_mask = {0,0};
+  uint32_t cu_mask[2];
   uint32_t bitPosition;
 
-  cu_mask[0] = vGPU->dev().availableCUs[0];
-  cu_mask[1] = vGPU->dev().availableCUs[1];
 
-  hsa_status_t status = hsa_amd_queue_cu_set_mask(vGPU->gpu_queue(), cu_mask.size() * 32, cu_mask.data());
+  uint32_t cu_mask_size;
+
+
+  hsa_status_t status = hsa_socal_queue_cu_acquire_mask(vGPU->gpu_queue(), cu_mask_size, cu_mask);
 
    if (status != HSA_STATUS_SUCCESS) {
     printf("hsa_amd_queue_cu_set_mask failed: 0x%x\n",status);
