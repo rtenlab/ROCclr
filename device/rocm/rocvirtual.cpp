@@ -42,6 +42,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <bitset> 
 
 
 /**
@@ -896,6 +897,9 @@ bool profilerCallback(hsa_signal_value_t value, void* arg) {
   Timestamp* ts = reinterpret_cast<Timestamp*>(arg);
   ts->end();
   VirtualGPU* vGPU = ts->gpu();
+
+  std::bitset<32> mask1(ts->cu_mask[0]);
+  std::bitset<32> mask2(ts->cu_mask[1]);
   
   //write to log file
   amd::ScopedLock lock(log_lock_);
@@ -910,7 +914,9 @@ bool profilerCallback(hsa_signal_value_t value, void* arg) {
            << ts->grid_size_z << ","
            << ts->getStart() << ","
            << ts->getEnd() << ","
-           << vGPU->dev().gpuIndex_ << std::endl;
+           << vGPU->dev().gpuIndex_ << ","
+           << vGPU->gpu_queue()->base_address << ","
+           << mask2.to_string() << mask1.to_string() << std::endl;
 
   log_file.close();
 
@@ -937,7 +943,7 @@ bool VirtualGPU::dispatchAqlPacket(
     ts->name_ = vcmd->kernel().name();
   }
   else {
-      ts->name_ = "null";
+      ts->name_ = "emptyKernel";
   }
 
   cu_mask_barrier_packet_.completion_signal  = CUBarriers().ActiveSignal();
@@ -3115,19 +3121,17 @@ bool cuMaskCallback(hsa_signal_value_t value, void *arg){
   VirtualGPU* vGPU = ts->gpu();
 
   static bool first = true;
-  uint32_t cu_mask[2];
-  uint32_t bitPosition;
-
+  std::vector<uint32_t> cu_mask = {0,0};
 
   uint32_t cu_mask_size;
 
 
-  hsa_status_t status = hsa_socal_queue_cu_acquire_mask(vGPU->gpu_queue(), cu_mask_size, cu_mask);
+  hsa_status_t status = hsa_socal_queue_cu_acquire_mask(vGPU->gpu_queue(), cu_mask_size, cu_mask.data());
 
    if (status != HSA_STATUS_SUCCESS) {
     printf("hsa_amd_queue_cu_set_mask failed: 0x%x\n",status);
   }
-
+  ts->cu_mask = cu_mask;
   hsa_signal_store_relaxed(vGPU->cu_mask_signals.front(),0);
 
   vGPU->cu_mask_signals.pop();

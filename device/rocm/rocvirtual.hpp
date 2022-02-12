@@ -110,6 +110,7 @@ class Timestamp : public amd::ReferenceCountedObject {
   uint32_t grid_size_x;
   uint32_t grid_size_y;
   uint32_t grid_size_z;
+  std::vector<uint32_t> cu_mask;
 
   Timestamp(VirtualGPU* gpu, amd::Command& command)
     : start_(std::numeric_limits<uint64_t>::max())
