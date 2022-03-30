@@ -900,11 +900,17 @@ bool profilerCallback(hsa_signal_value_t value, void* arg) {
 
   std::bitset<32> mask1(ts->cu_mask[0]);
   std::bitset<32> mask2(ts->cu_mask[1]);
+
+  char * logFile_env = getenv("ROCM_LOG_FILE");
+
+  if (logFile_env == nullptr) {
+    logFile_env = (char*)"/home/mchow009/logs/test.csv";
+  }
   
   //write to log file
   amd::ScopedLock lock(log_lock_);
   std::ofstream log_file;
-  log_file.open("/home/mchow009/logs/test.csv", std::ios::out | std::ios::app);
+  log_file.open(logFile_env, std::ios::out | std::ios::app);
   log_file << ts->name_ << ","
            << ts->workgroup_size_x << ","
            << ts->workgroup_size_y << ","
@@ -930,8 +936,32 @@ bool VirtualGPU::dispatchAqlPacket(
   hsa_kernel_dispatch_packet_t* packet, uint16_t header, uint16_t rest, bool blocking,
   amd::NDRangeKernelCommand* vcmd) {
   dispatchBlockingWait();
+
+  uint64_t wg_x = packet->workgroup_size_x;
+  uint64_t wg_y = packet->workgroup_size_y;
+  uint64_t wg_z = packet->workgroup_size_z;
+
+  uint64_t gs_x = packet->grid_size_x / wg_x;
+  uint64_t gs_y = packet->grid_size_y / wg_y;
+  uint64_t gs_z = packet->grid_size_z / wg_z;
+
+  if (gs_x == 0)
+      gs_x = 1;
+
+  uint64_t size = wg_x * wg_y * wg_z * gs_x * gs_y * gs_z;
+  std::string name;
+  if(vcmd !=nullptr) {
+    name = vcmd->kernel().name();
+  }
+  else {
+    name = "emptyKernel";
+  }
+
+  uint32_t numCUs = roc_device_.getNumCUs(name,size); 
+
+
+if(setMask) {
   //Dispatch CU Masking Packets
- 
   Timestamp * ts =  new Timestamp(this, *vcmd);
   ts->workgroup_size_x = packet->workgroup_size_x;
   ts->workgroup_size_y = packet->workgroup_size_y;
@@ -939,6 +969,7 @@ bool VirtualGPU::dispatchAqlPacket(
   ts->grid_size_x = packet->grid_size_x;
   ts->grid_size_y = packet->grid_size_y;
   ts->grid_size_z = packet->grid_size_z;
+  ts->num_cus_ = numCUs;
   if (vcmd != nullptr) {
     ts->name_ = vcmd->kernel().name();
   }
@@ -964,8 +995,9 @@ bool VirtualGPU::dispatchAqlPacket(
                                  0,
                                  profilerCallback,
                                  reinterpret_cast<void*>(ts));
-
+}
   return dispatchGenericAqlPacket(packet, header, rest, blocking);
+
 }
 
 // ================================================================================================
@@ -1197,6 +1229,7 @@ VirtualGPU::VirtualGPU(Device& device, bool profiling, bool cooperative,
   roc_device_.vgpus_.resize(roc_device_.numOfVgpus_);
   roc_device_.vgpus_[index()] = this;
 
+  setMask = true;
 }
 
 // ================================================================================================
@@ -3120,13 +3153,11 @@ bool cuMaskCallback(hsa_signal_value_t value, void *arg){
   Timestamp* ts = reinterpret_cast<Timestamp*>(arg);
   VirtualGPU* vGPU = ts->gpu();
 
-  static bool first = true;
   std::vector<uint32_t> cu_mask = {0,0};
 
   uint32_t cu_mask_size;
 
-
-  hsa_status_t status = hsa_socal_queue_cu_acquire_mask(vGPU->gpu_queue(), cu_mask_size, cu_mask.data());
+  hsa_status_t status = hsa_socal_queue_cu_acquire_mask(vGPU->gpu_queue(), ts->num_cus_, cu_mask_size, cu_mask.data());
 
    if (status != HSA_STATUS_SUCCESS) {
     printf("hsa_amd_queue_cu_set_mask failed: 0x%x\n",status);

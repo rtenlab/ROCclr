@@ -199,7 +199,7 @@ release(bool, GPU_ENABLE_COOP_GROUPS, true,                                   \
          "Enables cooperative group launch")                                  \
 release(uint, GPU_MAX_COMMAND_BUFFERS, 8,                                     \
          "The maximum number of command buffers allocated per queue")         \
-release(uint, GPU_MAX_HW_QUEUES, 4,                                           \
+release(uint, GPU_MAX_HW_QUEUES, 8,                                           \
          "The maximum number of HW queues allocated per device")              \
 release(bool, GPU_IMAGE_BUFFER_WAR, true,                                     \
         "Enables image buffer workaround")                                    \
@@ -228,7 +228,7 @@ release(uint, HIP_HOST_COHERENT, 0,                                           \
 release(uint, AMD_OPT_FLUSH, 1,                                               \
         "Kernel flush option , 0x0 = Use system-scope fence operations."      \
         "0x1 = Use device-scope fence operations when possible.")             \
-release(bool, AMD_DIRECT_DISPATCH, false,                                     \
+release(bool, AMD_DIRECT_DISPATCH, true,                                     \
         "Enable direct kernel dispatch.")                                     \
 release(uint, HIP_HIDDEN_FREE_MEM, 0,                                         \
         "Reserve free mem reporting in Mb"                                    \

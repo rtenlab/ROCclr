@@ -111,6 +111,7 @@ class Timestamp : public amd::ReferenceCountedObject {
   uint32_t grid_size_y;
   uint32_t grid_size_z;
   std::vector<uint32_t> cu_mask;
+  uint32_t num_cus_;
 
   Timestamp(VirtualGPU* gpu, amd::Command& command)
     : start_(std::numeric_limits<uint64_t>::max())
@@ -403,6 +404,7 @@ class VirtualGPU : public device::VirtualDevice {
 
   bool isProfilerAttached() const { return profilerAttached_; }
 
+  bool setMask;
   hsa_barrier_and_packet_t cu_mask_barrier_packet_;
   hsa_barrier_and_packet_t cu_mask_wait_barrier_packet_;
   std::queue<hsa_signal_t> cu_mask_signals;

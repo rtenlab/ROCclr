@@ -250,6 +250,7 @@ class HostQueue : public CommandQueue {
 
   //! Insert a command into the linked list of submitted commands
   void FormSubmissionBatch(Command* command) {
+
     // Insert the command to the linked list.
     if (nullptr == head_) {  // if the list is empty
       head_ = tail_ = command;
@@ -257,6 +258,7 @@ class HostQueue : public CommandQueue {
       tail_->setNext(command);
       tail_ = command;
     }
+
     command->setStatus(CL_SUBMITTED);
     command->retain();
     // @note: runtime needs double retain in order to maintain the batch,

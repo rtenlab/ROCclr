@@ -33,6 +33,7 @@
 #include "thread/thread.hpp"
 #include "thread/monitor.hpp"
 #include "utils/versions.hpp"
+#include "utils/csv.hpp"
 
 #include "device/rocm/rocsettings.hpp"
 #include "device/rocm/rocvirtual.hpp"
@@ -49,6 +50,7 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <map>
 #include <stdlib.h>
 
 /*! \addtogroup HSA
@@ -569,6 +571,10 @@ class Device : public NullDevice {
 
   //! Returns True if memory pointer is known to ROCr (excludes HMM allocations)
   bool IsValidAllocation(const void* dev_ptr, size_t size) const;
+
+  std::map<std::pair<std::string,uint64_t>,uint32_t> min_cus;
+
+  uint32_t getNumCUs(std::string name, uint64_t size);
 
   uint32_t availableCUs[2]; 
   uint32_t gpuIndex_; 

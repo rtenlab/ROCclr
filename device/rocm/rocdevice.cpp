@@ -182,66 +182,18 @@ Device::Device(hsa_agent_t bkendDevice,uint32_t index)
   gpuvm_segment_.handle = 0;
   gpu_fine_grained_segment_.handle = 0;
   prefetch_signal_.handle = 0;
+  
+  io::CSVReader<3> in("/home/mchow009/logs/min_cus.csv");
+  in.read_header(io::ignore_missing_column, "name","size","min_cu");
+  std::string name; uint64_t size; uint32_t min_cu;
 
-  //get number of active CUs from environment
-  char * numCUs_env = getenv("NUM_CUS");
-  uint32_t numCUs = 0;
-  if (numCUs_env != nullptr) {
-    numCUs = atoi(numCUs_env);
+  while(in.read_row(name, size, min_cu)) {
+      
+    std::pair <std::string,uint64_t> key (name,size);
+    min_cus.insert(std::pair<std::pair<std::string,uint64_t>,uint32_t>(key, min_cu));
+
   }
 
-  //get CU Policy from environment
-  char * cu_policy = getenv("CU_POLICY");
-  if (cu_policy == nullptr) {
-      cu_policy = (char*)"PACKED";
-  }
-  uint32_t bitPosition = 0;
-  availableCUs[0] = 0;
-  availableCUs[1] = 0;
-
-
-  if(strcmp(cu_policy, "PACKED") == 0) {
-    for (int i = 0; i < numCUs; i++) {
-      if (bitPosition < 32) {
-        availableCUs[0] |= 1ul << bitPosition;
-      }
-      else {
-        availableCUs[1] |= 1ul << (bitPosition - 32);
-      }
-      bitPosition += 4;
-
-      if ((i+1) % 15 == 0) {
-        bitPosition -= 59;
-      }
-    }
-  } else if(strcmp(cu_policy, "DISTRIBUTED") == 0) {
-    for (int i = 0; i < numCUs; i++) {
-      if (bitPosition < 32) {
-        availableCUs[0] |= 1ul << bitPosition;
-      }
-      else {
-        availableCUs[1] |= 1ul << (bitPosition - 32);
-      }
-      bitPosition++;
-    }
-  } else if(strcmp(cu_policy, "MINSE") == 0) {
-    uint32_t numSE = (numCUs+15-1) / 15;
-    uint32_t cuPerSE = (numCUs+numSE-1) / numSE;
-    for (int i = 0; i < numCUs; i++) {
-      if (bitPosition < 32) {
-        availableCUs[0] |= 1ul << bitPosition;
-      }
-      else {
-        availableCUs[1] |= 1ul << (bitPosition - 32);
-      }
-
-      bitPosition += 4;
-
-      if ((i+1) % cuPerSE == 0) {
-          bitPosition -= (cuPerSE*4) - 1;
-      }
-    }
-  }
 }
 
 void Device::setupCpuAgent() {
@@ -3135,6 +3087,21 @@ void Device::getGlobalCUMask(std::string cuMaskStr) {
   } else {
     info_.globalCUMask_ = {};
   }
+}
+
+// ================================================================================================
+
+uint32_t Device::getNumCUs(std::string name, uint64_t size) {
+  
+  std::pair<std::string,uint64_t> key (name, size);
+
+  auto it = min_cus.find(key);
+
+  uint32_t value = 60;
+  if(it != min_cus.end())
+      value = it->second;
+
+  return value;
 }
 
 // ================================================================================================
