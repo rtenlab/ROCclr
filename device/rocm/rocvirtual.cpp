@@ -70,6 +70,7 @@ namespace roc {
 
 extern bool cuMaskCallback(hsa_signal_value_t value, void* arg);
 extern bool profilerCallback(hsa_signal_value_t value, void* arg);
+extern bool maskingProfilerCallback(hsa_signal_value_t value, void* arg);
 
 // (HSA_FENCE_SCOPE_AGENT << HSA_PACKET_HEADER_ACQUIRE_FENCE_SCOPE) invalidates I, K and L1
 // (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE) invalidates L1, L2 and flushes
@@ -898,6 +899,8 @@ bool profilerCallback(hsa_signal_value_t value, void* arg) {
   ts->end();
   VirtualGPU* vGPU = ts->gpu();
 
+  hsa_status_t status = hsa_socal_queue_cu_release_mask(vGPU->gpu_queue(), ts->cu_mask.data());
+
   std::bitset<32> mask1(ts->cu_mask[0]);
   std::bitset<32> mask2(ts->cu_mask[1]);
 
@@ -922,6 +925,7 @@ bool profilerCallback(hsa_signal_value_t value, void* arg) {
            << ts->getEnd() << ","
            << vGPU->dev().gpuIndex_ << ","
            << vGPU->gpu_queue()->base_address << ","
+           << ts->num_cus_ << ","
            << mask2.to_string() << mask1.to_string() << std::endl;
 
   log_file.close();
@@ -936,7 +940,6 @@ bool VirtualGPU::dispatchAqlPacket(
   hsa_kernel_dispatch_packet_t* packet, uint16_t header, uint16_t rest, bool blocking,
   amd::NDRangeKernelCommand* vcmd) {
   dispatchBlockingWait();
-
   uint64_t wg_x = packet->workgroup_size_x;
   uint64_t wg_y = packet->workgroup_size_y;
   uint64_t wg_z = packet->workgroup_size_z;
@@ -952,12 +955,13 @@ bool VirtualGPU::dispatchAqlPacket(
   std::string name;
   if(vcmd !=nullptr) {
     name = vcmd->kernel().name();
+    name.pop_back();
   }
   else {
     name = "emptyKernel";
   }
 
-  uint32_t numCUs = roc_device_.getNumCUs(name,size); 
+  uint32_t numCUs = roc_device_.getNumCUs(name,size);
 
 
 if(setMask) {
@@ -972,6 +976,7 @@ if(setMask) {
   ts->num_cus_ = numCUs;
   if (vcmd != nullptr) {
     ts->name_ = vcmd->kernel().name();
+    ts->name_.pop_back();
   }
   else {
       ts->name_ = "emptyKernel";
@@ -986,15 +991,22 @@ if(setMask) {
                                  0,
                                  cuMaskCallback,
                                  reinterpret_cast<void*>(ts));
+  hsa_amd_signal_async_handler(cu_mask_wait_barrier_packet_.completion_signal,
+                                 HSA_SIGNAL_CONDITION_EQ,
+                                 0,
+                                 maskingProfilerCallback,
+                                 reinterpret_cast<void*>(ts));
   dispatchBarrierPacket(&cu_mask_barrier_packet_);
   dispatchBarrierPacket(&cu_mask_wait_barrier_packet_);
 
+  /*
   packet->completion_signal = CUBarriers().ActiveSignal();
   hsa_amd_signal_async_handler(packet->completion_signal,
                                  HSA_SIGNAL_CONDITION_EQ,
                                  0,
                                  profilerCallback,
                                  reinterpret_cast<void*>(ts));
+                                 */
 }
   return dispatchGenericAqlPacket(packet, header, rest, blocking);
 
@@ -1230,6 +1242,7 @@ VirtualGPU::VirtualGPU(Device& device, bool profiling, bool cooperative,
   roc_device_.vgpus_[index()] = this;
 
   setMask = true;
+  masking_time = 0;
 }
 
 // ================================================================================================
@@ -3152,7 +3165,7 @@ bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes, const 
 bool cuMaskCallback(hsa_signal_value_t value, void *arg){
   Timestamp* ts = reinterpret_cast<Timestamp*>(arg);
   VirtualGPU* vGPU = ts->gpu();
-
+  ts->masking_start();
   std::vector<uint32_t> cu_mask = {0,0};
 
   uint32_t cu_mask_size;
@@ -3166,7 +3179,21 @@ bool cuMaskCallback(hsa_signal_value_t value, void *arg){
   hsa_signal_store_relaxed(vGPU->cu_mask_signals.front(),0);
 
   vGPU->cu_mask_signals.pop();
+
   ts->start();
+  return false;
+}
+
+bool maskingProfilerCallback(hsa_signal_value_t value, void *arg) {
+  Timestamp* ts = reinterpret_cast<Timestamp*>(arg);
+  ts->masking_end();
+
+  if(ts->masking_end_ != 0) {
+      ts->gpu()->masking_time += ts->masking_end_ - ts->masking_start_;
+  }
+  
+  delete ts;
+  ts = nullptr;
 
   return false;
 }

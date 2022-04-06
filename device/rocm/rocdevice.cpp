@@ -183,7 +183,7 @@ Device::Device(hsa_agent_t bkendDevice,uint32_t index)
   gpu_fine_grained_segment_.handle = 0;
   prefetch_signal_.handle = 0;
   
-  io::CSVReader<3> in("/home/mchow009/logs/min_cus.csv");
+  io::CSVReader<3> in("/home/mchow009/logs/min_cus/min_cus.csv");
   in.read_header(io::ignore_missing_column, "name","size","min_cu");
   std::string name; uint64_t size; uint32_t min_cu;
 

@@ -31,6 +31,7 @@
 #include "thread/thread.hpp"
 #include "platform/object.hpp"
 #include "platform/command.hpp"
+
 /*! \brief Holds commands that will be executed on a specific device.
  *
  *  \details A command queue is created on a specific device in
@@ -285,6 +286,15 @@ class HostQueue : public CommandQueue {
 
   //! Get queue status
   bool GetQueueStatus() { return isActive_; }
+
+  void startProfiler() {
+      vdev()->startProfiler();
+
+  }
+
+  void endProfiler(uint64_t* time) {
+      vdev()->endProfiler(time);
+  }
 
 private:
   Command* head_;   //!< Head of the batch list

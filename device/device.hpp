@@ -1239,6 +1239,10 @@ class VirtualDevice : public amd::HeapObject {
 
   virtual address allocKernelArguments(size_t size, size_t alignment) { return nullptr; }
 
+  //profiler extensions
+  virtual void startProfiler() = 0;
+  virtual void endProfiler(uint64_t* time) = 0;
+
   //! Get the blit manager object
   device::BlitManager& blitMgr() const { return *blitMgr_; }
 

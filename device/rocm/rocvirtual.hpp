@@ -112,10 +112,14 @@ class Timestamp : public amd::ReferenceCountedObject {
   uint32_t grid_size_z;
   std::vector<uint32_t> cu_mask;
   uint32_t num_cus_;
+  uint64_t    masking_start_;
+  uint64_t    masking_end_;
 
   Timestamp(VirtualGPU* gpu, amd::Command& command)
     : start_(std::numeric_limits<uint64_t>::max())
     , end_(0)
+    , masking_start_(std::numeric_limits<uint64_t>::max())
+    , masking_end_(0)
     , gpu_(gpu)
     , command_(command)
     , parsedCommand_(nullptr)
@@ -156,6 +160,9 @@ class Timestamp : public amd::ReferenceCountedObject {
     }
   }
 
+  void masking_start() {masking_start_ = amd::Os::timeNanos();}
+  void masking_end()   {masking_end_ = amd::Os::timeNanos();}
+
   static void setGpuTicksToTime(double ticksToTime) { ticksToTime_ = ticksToTime; }
   static double getGpuTicksToTime() { return ticksToTime_; }
 
@@ -182,6 +189,7 @@ class Timestamp : public amd::ReferenceCountedObject {
 
 bool cuMaskCallback(hsa_signal_value_t value, void* arg);
 bool profilerCallback(hsa_signal_value_t value, void* arg);
+bool maskingProfilerCallback(hsa_signal_value_t value, void* arg);
 
 class VirtualGPU : public device::VirtualDevice {
  public:
@@ -331,6 +339,15 @@ class VirtualGPU : public device::VirtualDevice {
   void submitSvmUnmapMemory(amd::SvmUnmapMemoryCommand& cmd);
   void submitSvmPrefetchAsync(amd::SvmPrefetchAsyncCommand& cmd);
 
+  void startProfiler() {
+      masking_time = 0;
+
+  }
+  void endProfiler(uint64_t* time) {
+      *time = masking_time;
+      masking_time = 0;
+  }
+
   // { roc OpenCL integration
   // Added these stub (no-ops) implementation of pure virtual methods,
   // when integrating HSA and OpenCL branches.
@@ -405,6 +422,7 @@ class VirtualGPU : public device::VirtualDevice {
   bool isProfilerAttached() const { return profilerAttached_; }
 
   bool setMask;
+  uint64_t masking_time;
   hsa_barrier_and_packet_t cu_mask_barrier_packet_;
   hsa_barrier_and_packet_t cu_mask_wait_barrier_packet_;
   std::queue<hsa_signal_t> cu_mask_signals;
