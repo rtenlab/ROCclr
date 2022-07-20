@@ -287,8 +287,8 @@ class HostQueue : public CommandQueue {
   //! Get queue status
   bool GetQueueStatus() { return isActive_; }
 
-  void startProfiler() {
-      vdev()->startProfiler();
+  void startProfiler(uint32_t numCUs) {
+      vdev()->startProfiler(numCUs);
 
   }
 

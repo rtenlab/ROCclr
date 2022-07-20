@@ -339,11 +339,13 @@ class VirtualGPU : public device::VirtualDevice {
   void submitSvmUnmapMemory(amd::SvmUnmapMemoryCommand& cmd);
   void submitSvmPrefetchAsync(amd::SvmPrefetchAsyncCommand& cmd);
 
-  void startProfiler() {
+  void startProfiler(uint32_t numCUs) {
+      amd::ScopedLock lock(masking_lock_);
       masking_time = 0;
-
+      num_cus = numCUs;
   }
   void endProfiler(uint64_t* time) {
+      amd::ScopedLock lock(masking_lock_);
       *time = masking_time;
       masking_time = 0;
   }
@@ -423,9 +425,12 @@ class VirtualGPU : public device::VirtualDevice {
 
   bool setMask;
   uint64_t masking_time;
+  uint32_t num_cus;
+  amd::Monitor masking_lock_;
   hsa_barrier_and_packet_t cu_mask_barrier_packet_;
   hsa_barrier_and_packet_t cu_mask_wait_barrier_packet_;
   std::queue<hsa_signal_t> cu_mask_signals;
+  std::vector<uint32_t> prev_cu_mask;
 
   // } roc OpenCL integration
  private:

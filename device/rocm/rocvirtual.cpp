@@ -899,7 +899,7 @@ bool profilerCallback(hsa_signal_value_t value, void* arg) {
   ts->end();
   VirtualGPU* vGPU = ts->gpu();
 
-  hsa_status_t status = hsa_socal_queue_cu_release_mask(vGPU->gpu_queue(), ts->cu_mask.data());
+//hsa_status_t status = hsa_socal_queue_cu_release_mask(vGPU->gpu_queue(), ts->cu_mask.data());
 
   std::bitset<32> mask1(ts->cu_mask[0]);
   std::bitset<32> mask2(ts->cu_mask[1]);
@@ -940,6 +940,9 @@ bool VirtualGPU::dispatchAqlPacket(
   hsa_kernel_dispatch_packet_t* packet, uint16_t header, uint16_t rest, bool blocking,
   amd::NDRangeKernelCommand* vcmd) {
   dispatchBlockingWait();
+
+if(setMask) {
+  uint64_t masking_start = amd::Os::timeNanos();
   uint64_t wg_x = packet->workgroup_size_x;
   uint64_t wg_y = packet->workgroup_size_y;
   uint64_t wg_z = packet->workgroup_size_z;
@@ -961,10 +964,10 @@ bool VirtualGPU::dispatchAqlPacket(
     name = "emptyKernel";
   }
 
-  uint32_t numCUs = roc_device_.getNumCUs(name,size);
+  uint32_t numCUs = roc_device_.getNumCUs(name,size); //ESKPI
+  //numCUs = 60; //MPS Default
+  //numCUs = num_cus; //static_equal & spatial_oracle
 
-
-if(setMask) {
   //Dispatch CU Masking Packets
   Timestamp * ts =  new Timestamp(this, *vcmd);
   ts->workgroup_size_x = packet->workgroup_size_x;
@@ -991,22 +994,25 @@ if(setMask) {
                                  0,
                                  cuMaskCallback,
                                  reinterpret_cast<void*>(ts));
+  /*
   hsa_amd_signal_async_handler(cu_mask_wait_barrier_packet_.completion_signal,
                                  HSA_SIGNAL_CONDITION_EQ,
                                  0,
                                  maskingProfilerCallback,
                                  reinterpret_cast<void*>(ts));
+                                 */
   dispatchBarrierPacket(&cu_mask_barrier_packet_);
   dispatchBarrierPacket(&cu_mask_wait_barrier_packet_);
 
-  /*
+  
   packet->completion_signal = CUBarriers().ActiveSignal();
   hsa_amd_signal_async_handler(packet->completion_signal,
                                  HSA_SIGNAL_CONDITION_EQ,
                                  0,
                                  profilerCallback,
                                  reinterpret_cast<void*>(ts));
-                                 */
+  //amd::ScopedLock lock(masking_lock_);
+  //masking_time += amd::Os::timeNanos() - masking_start;
 }
   return dispatchGenericAqlPacket(packet, header, rest, blocking);
 
@@ -1243,6 +1249,8 @@ VirtualGPU::VirtualGPU(Device& device, bool profiling, bool cooperative,
 
   setMask = true;
   masking_time = 0;
+  num_cus = 60;
+  prev_cu_mask.resize(2,0);
 }
 
 // ================================================================================================
@@ -3166,6 +3174,7 @@ bool cuMaskCallback(hsa_signal_value_t value, void *arg){
   Timestamp* ts = reinterpret_cast<Timestamp*>(arg);
   VirtualGPU* vGPU = ts->gpu();
   ts->masking_start();
+  hsa_socal_queue_cu_release_mask(vGPU->gpu_queue(), vGPU->prev_cu_mask.data());
   std::vector<uint32_t> cu_mask = {0,0};
 
   uint32_t cu_mask_size;
@@ -3176,6 +3185,7 @@ bool cuMaskCallback(hsa_signal_value_t value, void *arg){
     printf("hsa_amd_queue_cu_set_mask failed: 0x%x\n",status);
   }
   ts->cu_mask = cu_mask;
+  vGPU->prev_cu_mask = cu_mask;
   hsa_signal_store_relaxed(vGPU->cu_mask_signals.front(),0);
 
   vGPU->cu_mask_signals.pop();
@@ -3186,14 +3196,15 @@ bool cuMaskCallback(hsa_signal_value_t value, void *arg){
 
 bool maskingProfilerCallback(hsa_signal_value_t value, void *arg) {
   Timestamp* ts = reinterpret_cast<Timestamp*>(arg);
-  ts->masking_end();
+  amd::ScopedLock lock(ts->gpu()->masking_lock_)
+  if(ts != nullptr) {
+    ts->masking_end();
 
-  if(ts->masking_end_ != 0) {
+    if(ts->masking_end_ != 0) {
       ts->gpu()->masking_time += ts->masking_end_ - ts->masking_start_;
-  }
-  
-  delete ts;
-  ts = nullptr;
+    }
+    delete ts;
+  } 
 
   return false;
 }
