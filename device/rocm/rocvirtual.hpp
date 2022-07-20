@@ -446,6 +446,7 @@ class VirtualGPU : public device::VirtualDevice {
   template <typename AqlPacket> bool dispatchGenericAqlPacket(AqlPacket* packet, uint16_t header,
                                                               uint16_t rest, bool blocking,
                                                               size_t size = 1);
+  void dispatchBarrierPacket(const hsa_barrier_and_packet_t* packet);
   void dispatchBarrierPacket(uint16_t packetHeader, bool skipSignal = false,
                              hsa_signal_t signal = hsa_signal_t{0});
   bool dispatchCounterAqlPacket(hsa_ext_amd_aql_pm4_packet_t* packet, const uint32_t gfxVersion,

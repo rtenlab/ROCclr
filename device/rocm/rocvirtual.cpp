@@ -3196,7 +3196,7 @@ bool cuMaskCallback(hsa_signal_value_t value, void *arg){
 
 bool maskingProfilerCallback(hsa_signal_value_t value, void *arg) {
   Timestamp* ts = reinterpret_cast<Timestamp*>(arg);
-  amd::ScopedLock lock(ts->gpu()->masking_lock_)
+  amd::ScopedLock lock(ts->gpu()->masking_lock_);
   if(ts != nullptr) {
     ts->masking_end();
 
