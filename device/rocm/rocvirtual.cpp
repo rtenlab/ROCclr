@@ -910,7 +910,8 @@ bool profilerCallback(hsa_signal_value_t value, void* arg) {
     logFile_env = (char*)"/home/mchow009/logs/test.csv";
   }
   
-  //write to log file
+  //write to log file 
+  /*
   amd::ScopedLock lock(log_lock_);
   std::ofstream log_file;
   log_file.open(logFile_env, std::ios::out | std::ios::app);
@@ -929,7 +930,7 @@ bool profilerCallback(hsa_signal_value_t value, void* arg) {
            << mask2.to_string() << mask1.to_string() << std::endl;
 
   log_file.close();
-
+*/
   delete ts;
   ts = nullptr;
   return false;
@@ -964,9 +965,9 @@ if(setMask) {
     name = "emptyKernel";
   }
 
-  uint32_t numCUs = roc_device_.getNumCUs(name,size); //ESKPI
-  //numCUs = 60; //MPS Default
-  //numCUs = num_cus; //static_equal & spatial_oracle
+  //uint32_t numCUs = roc_device_.getNumCUs(name,size); //ESKPI
+  uint32_t numCUs = 60; //MPS Default
+  //uint32_t numCUs = num_cus; //static_equal & spatial_oracle
 
   //Dispatch CU Masking Packets
   Timestamp * ts =  new Timestamp(this, *vcmd);
@@ -989,7 +990,7 @@ if(setMask) {
   cu_mask_wait_barrier_packet_.completion_signal  = CUBarriers().ActiveSignal();
   cu_mask_signals.push(CUBarriers().ActiveSignal());
   cu_mask_wait_barrier_packet_.dep_signal[0] = cu_mask_signals.back();
-  hsa_amd_signal_async_handler(cu_mask_barrier_packet_.completion_signal,
+  hsa_socal_signal_async_handler(gpu_queue(),cu_mask_barrier_packet_.completion_signal,
                                  HSA_SIGNAL_CONDITION_EQ,
                                  0,
                                  cuMaskCallback,
@@ -1006,7 +1007,7 @@ if(setMask) {
 
   
   packet->completion_signal = CUBarriers().ActiveSignal();
-  hsa_amd_signal_async_handler(packet->completion_signal,
+  hsa_socal_signal_async_handler(gpu_queue(),packet->completion_signal,
                                  HSA_SIGNAL_CONDITION_EQ,
                                  0,
                                  profilerCallback,

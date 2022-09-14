@@ -339,10 +339,13 @@ class VirtualGPU : public device::VirtualDevice {
   void submitSvmUnmapMemory(amd::SvmUnmapMemoryCommand& cmd);
   void submitSvmPrefetchAsync(amd::SvmPrefetchAsyncCommand& cmd);
 
+  bool startProfCalled;
   void startProfiler(uint32_t numCUs) {
       amd::ScopedLock lock(masking_lock_);
       masking_time = 0;
       num_cus = numCUs;
+
+      startProfCalled = true;
   }
   void endProfiler(uint64_t* time) {
       amd::ScopedLock lock(masking_lock_);

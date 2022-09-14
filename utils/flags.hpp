@@ -270,7 +270,7 @@ release(uint, ROC_P2P_SDMA_SIZE, 1024,                                        \
         "The minimum size in KB for P2P transfer with SDMA")                  \
 release(uint, ROC_AQL_QUEUE_SIZE, 4096,                                       \
         "AQL queue size in AQL packets")                                      \
-release(uint, ROC_SIGNAL_POOL_SIZE, 32,                                       \
+release(uint, ROC_SIGNAL_POOL_SIZE, 4096,                                       \
         "Initial size of HSA signal pool")                                    \
 release(bool, ROC_SKIP_KERNEL_ARG_COPY, false,                                \
         "If true, then runtime can skip kernel arg copy")                     \
