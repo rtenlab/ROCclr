@@ -909,9 +909,7 @@ bool profilerCallback(hsa_signal_value_t value, void* arg) {
   if (logFile_env == nullptr) {
     logFile_env = (char*)"/home/mchow009/logs/test.csv";
   }
-  
   //write to log file 
-  /*
   amd::ScopedLock lock(log_lock_);
   std::ofstream log_file;
   log_file.open(logFile_env, std::ios::out | std::ios::app);
@@ -930,7 +928,6 @@ bool profilerCallback(hsa_signal_value_t value, void* arg) {
            << mask2.to_string() << mask1.to_string() << std::endl;
 
   log_file.close();
-*/
   delete ts;
   ts = nullptr;
   return false;
@@ -1007,12 +1004,13 @@ if(setMask) {
 
   
   packet->completion_signal = CUBarriers().ActiveSignal();
+  /*
   hsa_socal_signal_async_handler(gpu_queue(),packet->completion_signal,
                                  HSA_SIGNAL_CONDITION_EQ,
                                  0,
                                  profilerCallback,
                                  reinterpret_cast<void*>(ts));
-  //amd::ScopedLock lock(masking_lock_);
+  */
   //masking_time += amd::Os::timeNanos() - masking_start;
 }
   return dispatchGenericAqlPacket(packet, header, rest, blocking);
@@ -3191,6 +3189,8 @@ bool cuMaskCallback(hsa_signal_value_t value, void *arg){
 
   vGPU->cu_mask_signals.pop();
 
+  ts->masking_end();
+  ts->gpu()->masking_time += ts->masking_end_ - ts->masking_start_;
   ts->start();
   return false;
 }
