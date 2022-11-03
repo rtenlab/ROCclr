@@ -1011,7 +1011,7 @@ if(setMask) {
                                  profilerCallback,
                                  reinterpret_cast<void*>(ts));
   */
-  //masking_time += amd::Os::timeNanos() - masking_start;
+  masking_time += amd::Os::timeNanos() - masking_start;
 }
   return dispatchGenericAqlPacket(packet, header, rest, blocking);
 
@@ -1246,7 +1246,7 @@ VirtualGPU::VirtualGPU(Device& device, bool profiling, bool cooperative,
   roc_device_.vgpus_.resize(roc_device_.numOfVgpus_);
   roc_device_.vgpus_[index()] = this;
 
-  setMask = true;
+  setMask = false;
   masking_time = 0;
   num_cus = 60;
   prev_cu_mask.resize(2,0);
@@ -3178,7 +3178,7 @@ bool cuMaskCallback(hsa_signal_value_t value, void *arg){
 
   uint32_t cu_mask_size;
 
-  hsa_status_t status = hsa_socal_queue_cu_acquire_mask(vGPU->gpu_queue(), ts->num_cus_, cu_mask_size, cu_mask.data());
+  hsa_status_t status = hsa_socal_queue_cu_acquire_mask(vGPU->gpu_queue(), ts->num_cus_, &cu_mask_size, cu_mask.data());
 
    if (status != HSA_STATUS_SUCCESS) {
     printf("hsa_amd_queue_cu_set_mask failed: 0x%x\n",status);

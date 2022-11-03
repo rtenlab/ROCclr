@@ -353,6 +353,17 @@ class VirtualGPU : public device::VirtualDevice {
       masking_time = 0;
   }
 
+  void setCUMask(uint32_t cu_mask_count, uint32_t* cu_mask) {
+
+  }
+
+  void acquireCUMask(uint32_t num_cus) {
+      std::vector<uint32_t> cu_mask = {0,0};
+      uint32_t cu_mask_size;
+      hsa_status_t status = hsa_socal_queue_cu_acquire_mask(gpu_queue(), num_cus, &cu_mask_size, cu_mask.data());
+
+  }
+
   // { roc OpenCL integration
   // Added these stub (no-ops) implementation of pure virtual methods,
   // when integrating HSA and OpenCL branches.

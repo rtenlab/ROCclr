@@ -295,6 +295,12 @@ class HostQueue : public CommandQueue {
   void endProfiler(uint64_t* time) {
       vdev()->endProfiler(time);
   }
+  void setCUMask(uint32_t cu_mask_count, uint32_t* cu_mask) {
+      vdev()->setCUMask(cu_mask_count,cu_mask);
+  }
+  void acquireCUMask(uint32_t num_cus) {
+      vdev()->acquireCUMask(num_cus);
+  }
 
 private:
   Command* head_;   //!< Head of the batch list
