@@ -1245,6 +1245,7 @@ class VirtualDevice : public amd::HeapObject {
 
   virtual void setCUMask(uint32_t cu_mask_count, uint32_t* cu_mask) = 0;
   virtual void acquireCUMask(uint32_t num_cus) = 0;
+  virtual void releaseCUMask() = 0;
 
   //! Get the blit manager object
   device::BlitManager& blitMgr() const { return *blitMgr_; }

@@ -301,6 +301,9 @@ class HostQueue : public CommandQueue {
   void acquireCUMask(uint32_t num_cus) {
       vdev()->acquireCUMask(num_cus);
   }
+  void releaseCUMask() {
+      vdev()->releaseCUMask();
+  }
 
 private:
   Command* head_;   //!< Head of the batch list

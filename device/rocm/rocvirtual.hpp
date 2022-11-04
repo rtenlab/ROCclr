@@ -363,6 +363,10 @@ class VirtualGPU : public device::VirtualDevice {
       hsa_status_t status = hsa_socal_queue_cu_acquire_mask(gpu_queue(), num_cus, &cu_mask_size, cu_mask.data());
 
   }
+  void releaseCUMask() {
+      std::vector<uint32_t> cu_mask = {0,0};
+      hsa_status_t status = hsa_socal_queue_cu_release_mask(gpu_queue(), cu_mask.data());
+  }
 
   // { roc OpenCL integration
   // Added these stub (no-ops) implementation of pure virtual methods,

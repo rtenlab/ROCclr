@@ -353,6 +353,7 @@ class VirtualGPU : public device::VirtualDevice {
   virtual void endProfiler(uint64_t *time) {}
   virtual void setCUMask(uint32_t cu_mask_count, uint32_t* cu_mask) {}
   virtual void acquireCUMask(uint32_t num_cus) {}
+  virtual void releaseCUMask() {}
 
   void submitExternalSemaphoreCmd(amd::ExternalSemaphoreCmd& cmd);
 
