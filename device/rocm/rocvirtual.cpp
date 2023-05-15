@@ -3061,6 +3061,9 @@ void VirtualGPU::submitKernel(amd::NDRangeKernelCommand& vcmd) {
       return;
     }
 
+
+    // ryf code
+
     // Lock the queue, using the blit manager lock
     amd::ScopedLock lock(queue->blitMgr().lockXfer());
 

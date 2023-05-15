@@ -1065,7 +1065,12 @@ class NDRangeKernelCommand : public Command {
                        uint64_t prevGridSum = 0, uint64_t allGridSum = 0,
                        uint32_t firstDevice = 0, bool forceProfiling = false);
 
-  virtual void submit(device::VirtualDevice& device) { device.submitKernel(*this); }
+  virtual void submit(device::VirtualDevice& device) { 
+    
+    // ryf code
+    std::cout << "Kernel submit to device from queue# " << queue.GetQueueIndex() << std::endl;
+    
+    device.submitKernel(*this); }
 
   //! Release all resources associated with this command (
   void releaseResources();

@@ -44,6 +44,9 @@ namespace amd {
 class HostQueue;
 class DeviceQueue;
 
+// ryf code
+int HostQueueSize = 0;
+
 class CommandQueue : public RuntimeObject {
  public:
   static constexpr uint RealTimeDisabled = 0xffffffff;
@@ -293,13 +296,17 @@ class HostQueue : public CommandQueue {
   //! Reset counter
   void ResetMarkerTsCount() { markerTsCount_ = 0; }
 
+  //! Get queue index
+  uint32_t GetQueueIndex() { return hqIndex_; }
+
 private:
   Command* head_;   //!< Head of the batch list
   Command* tail_;   //!< Tail of the batch list
 
   //! True if this command queue is active
   bool isActive_;
-
+  // ryf code
+  uint32_t hqIndex_; // index identifier
   uint32_t markerTsCount_; //!< Count of TS markers
 };
 

@@ -41,7 +41,12 @@ HostQueue::HostQueue(Context& context, Device& device, cl_command_queue_properti
       head_(nullptr),
       tail_(nullptr),
       isActive_(false),
+      hqIndex_(HostQueueSize),
       markerTsCount_(0) {
+  
+  // ryf code
+  HostQueueSize++;
+  std::cout << "hostQueue Index: " << hqIndex_ << std::endl
   if (AMD_DIRECT_DISPATCH) {
     // Initialize the queue
     thread_.Init(this);
