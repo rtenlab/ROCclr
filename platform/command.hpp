@@ -1039,6 +1039,7 @@ class MigrateMemObjectsCommand : public Command {
 //! To execute a kernel on a specific device.
 class NDRangeKernelCommand : public Command {
  private:
+  HostQueue& originQueue_;
   Kernel& kernel_;
   NDRangeContainer sizes_;
   address parameters_;      //!< Pointer to the kernel argumets
@@ -1066,12 +1067,14 @@ class NDRangeKernelCommand : public Command {
                        uint32_t firstDevice = 0, bool forceProfiling = false);
 
   virtual void submit(device::VirtualDevice& device) { 
-    
     // ryf code
-    std::cout << "Kernel submit to device from queue# " << queue.GetQueueIndex() << std::endl;
-    
+    std::cout << "Kernel of name: " << kernel().name().c_str() << "has been submit.\n";
     device.submitKernel(*this); }
 
+  const HostQueue& originQueue() const {return originQueue_; }
+
+  // end ryf code
+  
   //! Release all resources associated with this command (
   void releaseResources();
 
