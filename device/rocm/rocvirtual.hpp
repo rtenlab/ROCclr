@@ -408,8 +408,10 @@ class VirtualGPU : public device::VirtualDevice {
   //! Dispatches a barrier with blocking HSA signals
   void dispatchBlockingWait();
 
+  // ryf code (tweak to include kernel packet)
   bool dispatchAqlPacket(hsa_kernel_dispatch_packet_t* packet, uint16_t header,
-                         uint16_t rest, bool blocking = true);
+                         uint16_t rest, bool blocking = true, amd::NDRangeKernelCommand* vcmd = nullptr);
+  // end ryf code
   bool dispatchAqlPacket(hsa_barrier_and_packet_t* packet, uint16_t header,
                         uint16_t rest, bool blocking = true);
   template <typename AqlPacket> bool dispatchGenericAqlPacket(AqlPacket* packet, uint16_t header,

@@ -904,9 +904,12 @@ void VirtualGPU::dispatchBlockingWait() {
 
 // ================================================================================================
 bool VirtualGPU::dispatchAqlPacket(
-  hsa_kernel_dispatch_packet_t* packet, uint16_t header, uint16_t rest, bool blocking) {
+  hsa_kernel_dispatch_packet_t* packet, uint16_t header, uint16_t rest, bool blocking, amd::NDRangeKernelCommand* vcmd) {
   dispatchBlockingWait();
 
+  // ryf code for idenfying what's about to be scheduled
+  std::cout << "Kernel of name: " << vcmd.name().c_str() << " launched from stream # " << vcmd.originQueue() << std::endl;
+  // end ryf code
   return dispatchGenericAqlPacket(packet, header, rest, blocking);
 }
 
@@ -2998,7 +3001,7 @@ bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes,
     if (!dispatchAqlPacket(
             &dispatchPacket, aqlHeaderWithOrder,
             (sizes.dimensions() << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS),
-            GPU_FLUSH_ON_EXECUTION)) {
+            GPU_FLUSH_ON_EXECUTION, vcmd)) {
       return false;
     }
   }

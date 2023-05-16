@@ -417,10 +417,10 @@ NDRangeKernelCommand::NDRangeKernelCommand(HostQueue& queue, const EventWaitList
                                            uint64_t prevGridSum, uint64_t allGridSum,
                                            uint32_t firstDevice, bool forceProfiling) :
     Command(queue, CL_COMMAND_NDRANGE_KERNEL, eventWaitList, AMD_SERIALIZE_KERNEL),
-    // ryf code
-    originQueue(queue), 
+    // ryf code to associated a kernel with its queue
+    originQueue_(queue.GetQueueIndex()), 
     // end ryf code
-    
+
     kernel_(kernel),
     sizes_(sizes),
     sharedMemBytes_(sharedMemBytes),

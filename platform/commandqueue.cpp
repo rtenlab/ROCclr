@@ -33,8 +33,9 @@
 
 namespace amd {
 
-// ryf code
+// ryf code counter for queues
 int HostQueueSize = 0;
+// end ryf code
 
 HostQueue::HostQueue(Context& context, Device& device, cl_command_queue_properties properties,
                      uint queueRTCUs, Priority priority, const std::vector<uint32_t>& cuMask)
@@ -47,9 +48,11 @@ HostQueue::HostQueue(Context& context, Device& device, cl_command_queue_properti
       hqIndex_(HostQueueSize),
       markerTsCount_(0) {
   
-  // ryf code
+  // ryf code to keep track of which queue is which
   HostQueueSize++;
-  std::cout << "hostQueue created with index: " << hqIndex_ << std::endl;
+  // std::cout << "hostQueue created with index: " << hqIndex_ << std::endl;
+  // end ryf code
+
   if (AMD_DIRECT_DISPATCH) {
     // Initialize the queue
     thread_.Init(this);
