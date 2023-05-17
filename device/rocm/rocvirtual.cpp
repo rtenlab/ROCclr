@@ -908,8 +908,14 @@ bool VirtualGPU::dispatchAqlPacket(
   dispatchBlockingWait();
 
   // ryf code for idenfying what's about to be scheduled
-  std::cout << "Kernel of name: " << vcmd.name().c_str() << " launched from stream # " << vcmd.originQueue() << std::endl;
+  std::cout << "Kernel: " << vcmd->kernel().name().c_str() << " strNum: " << vcmd->originQueue() << " CU_Mask: " << vcmd->kernel().cuMask().c_str() << std::endl;
+
+  fstream outfile;
+  outfile.open("/home/rquac004/temp.txt");
+  outfile << "Kernel: " << vcmd->kernel().name().c_str() << " strNum: " << vcmd->originQueue() << " CU_Mask: " << vcmd->kernel().cuMask().c_str() << std::endl;
+  outfile.close();
   // end ryf code
+  
   return dispatchGenericAqlPacket(packet, header, rest, blocking);
 }
 

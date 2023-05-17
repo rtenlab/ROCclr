@@ -377,8 +377,9 @@ void Command::enqueue() {
       queue_->ResetMarkerTsCount();
     }
 
-    // ryf code
-    std::cout << "Host Queue# " << queue_->GetQueueIndex() << " has been enqueued.\n";
+    // ryf code for figuring out when commands of any form are submit via host queues being enqueued
+    // std::cout << "Host Queue# " << queue_->GetQueueIndex() << " has been enqueued.\n";
+    // end ryf code
 
     if (isMarker && submitBatch) {
       // Update batch head for the current marker. Hence the status of all commands can be

@@ -48,7 +48,7 @@ HostQueue::HostQueue(Context& context, Device& device, cl_command_queue_properti
       hqIndex_(HostQueueSize),
       markerTsCount_(0) {
   
-  // ryf code to keep track of which queue is which
+  // ryf code to increment number of queue created
   HostQueueSize++;
   // std::cout << "hostQueue created with index: " << hqIndex_ << std::endl;
   // end ryf code
